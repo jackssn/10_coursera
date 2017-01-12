@@ -65,7 +65,7 @@ def output_courses_info_to_xlsx(filepath, courses_info):
 
 
 if __name__ == '__main__':
-    courses_quantity = 10
+    courses_quantity = 20
     filepath = input("Enter filepath (with name xlsx-file without extension) to save your sheet with courses: ")
     urls = get_courses_list(courses_quantity)
     courses_info = []
