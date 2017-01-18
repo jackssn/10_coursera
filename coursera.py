@@ -7,6 +7,13 @@ from openpyxl import Workbook
 from bs4 import BeautifulSoup
 
 
+def check_positive(value):
+    ivalue = int(value)
+    if ivalue <= 0:
+         raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
+    return ivalue
+
+
 def get_random_courses_list(quantity):
     response = requests.get('https://www.coursera.org/sitemap~www~courses.xml')
     courses_soup = BeautifulSoup(response.text, 'html5lib')
@@ -68,7 +75,7 @@ def output_courses_info_to_xlsx(filepath, courses_info):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Courses quantity')
-    parser.add_argument('courses_quantity', type=int, help='How many courses to show')
+    parser.add_argument('courses_quantity', type=check_positive, help='How many courses to show')
     parser.add_argument("path_to_save", type=str, help="The path where you want to save xlsx.")
     args = parser.parse_args()
 
