@@ -1,4 +1,5 @@
 import requests
+import argparse
 import json
 import random
 
@@ -6,7 +7,14 @@ from openpyxl import Workbook
 from bs4 import BeautifulSoup
 
 
-def get_courses_list(quantity):
+def check_positive(value):
+    ivalue = int(value)
+    if ivalue <= 0:
+         raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
+    return ivalue
+
+
+def get_random_courses_list(quantity):
     response = requests.get('https://www.coursera.org/sitemap~www~courses.xml')
     courses_soup = BeautifulSoup(response.text, 'html5lib')
     course_url_list = courses_soup.urlset.find_all('loc')
@@ -32,11 +40,13 @@ def get_course_info(course_slug):
         course_info_json = json.loads(course_info_from_script_tag)
         course_info['start_date'] = course_info_json['hasCourseInstance'][0]['startDate']
     except AttributeError:
-        index_start_launch_date = course_page_html.find("plannedLaunchDate") + 20
+        skip_letters_in_launch_date = 20
+        index_start_launch_date = course_page_html.find("plannedLaunchDate") + skip_letters_in_launch_date
         index_end_launch_date = index_start_launch_date + course_page_html[index_start_launch_date:].find('"')
         course_info['start_date'] = course_page_html[index_start_launch_date: index_end_launch_date]
 
-    index_start_workload = course_page_html.find("workload") + 11
+    skip_letters_in_workload = 11
+    index_start_workload = course_page_html.find("workload") + skip_letters_in_workload
     index_end_workload = index_start_workload + course_page_html[index_start_workload:].find('"')
     course_info['workload'] = course_page_html[index_start_workload: index_end_workload]
 
@@ -61,15 +71,19 @@ def output_courses_info_to_xlsx(filepath, courses_info):
                    course_info['rating']
                    ])
     wb.save("%s.xlsx" % filepath)
-    print("%s saved" % filepath)
 
 
 if __name__ == '__main__':
-    courses_quantity = 20
-    filepath = input("Enter filepath (with name xlsx-file without extension) to save your sheet with courses: ")
-    urls = get_courses_list(courses_quantity)
+    parser = argparse.ArgumentParser(description='Courses quantity')
+    parser.add_argument('courses_quantity', type=check_positive, help='How many courses to show')
+    parser.add_argument("path_to_save", type=str, help="The path where you want to save xlsx.")
+    args = parser.parse_args()
+
+    filepath = args.path_to_save
+    urls = get_random_courses_list(args.courses_quantity)
     courses_info = []
     for course_number, url in enumerate(urls, start=1):
         courses_info.append(get_course_info(url))
         print("%s course added to general list" % course_number)
+    print("%s.xlsx saved" % filepath)
     output_courses_info_to_xlsx(filepath, courses_info)
