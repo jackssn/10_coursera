@@ -21,11 +21,8 @@ def get_random_courses_list(quantity):
     return [x.string for x in random.sample(course_url_list, quantity)]
 
 
-def create_course_info_dict(course_slug):
-    response = requests.get(course_slug)
-    response.encoding = 'utf-8'
-    course_page_html = response.text
-    course_page_soup = BeautifulSoup(course_page_html, 'html5lib')
+def create_course_info_dict(raw_course_html):
+    course_page_soup = BeautifulSoup(raw_course_html, 'html5lib')
     course_info = {
         'title': course_page_soup.find("div", {"class": "title display-3-text"}).text,
         'language': course_page_soup.find("div", {"class": "language-info"}).text,
@@ -40,14 +37,14 @@ def create_course_info_dict(course_slug):
         course_info['start_date'] = course_info_json['hasCourseInstance'][0]['startDate']
     except AttributeError:
         skip_letters_in_launch_date = 20
-        index_start_launch_date = course_page_html.find("plannedLaunchDate") + skip_letters_in_launch_date
-        index_end_launch_date = index_start_launch_date + course_page_html[index_start_launch_date:].find('"')
-        course_info['start_date'] = course_page_html[index_start_launch_date: index_end_launch_date]
+        index_start_launch_date = raw_course_html.find("plannedLaunchDate") + skip_letters_in_launch_date
+        index_end_launch_date = index_start_launch_date + raw_course_html[index_start_launch_date:].find('"')
+        course_info['start_date'] = raw_course_html[index_start_launch_date: index_end_launch_date]
 
     skip_letters_in_workload = 11
-    index_start_workload = course_page_html.find("workload") + skip_letters_in_workload
-    index_end_workload = index_start_workload + course_page_html[index_start_workload:].find('"')
-    course_info['workload'] = course_page_html[index_start_workload: index_end_workload]
+    index_start_workload = raw_course_html.find("workload") + skip_letters_in_workload
+    index_end_workload = index_start_workload + raw_course_html[index_start_workload:].find('"')
+    course_info['workload'] = raw_course_html[index_start_workload: index_end_workload]
 
     try:
         course_info['rating'] = course_page_soup.find("div", {"class": "ratings-text bt3-visible-xs"}).text
@@ -86,9 +83,11 @@ if __name__ == '__main__':
     urls = get_random_courses_list(args.courses_quantity)
     courses_info = []
     for course_number, url in enumerate(urls, start=1):
-        courses_info.append(create_course_info_dict(url))
+        response = requests.get(url)
+        response.encoding = 'utf-8'
+        courses_info.append(create_course_info_dict(response.text))
         print("%s course added to general list" % course_number)
 
-    wb = create_courses_info_workbook(courses_info)
-    save_courses_info_into_xlsx(wb, path_to_save)
+    workbook = create_courses_info_workbook(courses_info)
+    save_courses_info_into_xlsx(workbook, path_to_save)
     print("%s.xlsx successfully saved" % path_to_save)
